@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotation Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .page {
+            min-height: 100vh;
+        }
+        .quotation-preview {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            .quotation-preview {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+            }
+        }
+        @media (max-width: 768px) {
+            .quotation-preview {
+                width: 100%;
+                padding: 10px;
+                min-height: auto;
+            }
+            table {
+                font-size: 12px;
+            }
+        }
+        .blank-row {
+            height: 25px;
+            border: none !important;
+        }
+        .blank-row td {
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-xl font-bold mb-2 md:mb-0">Quotation Generator</h1>
+            <div class="flex space-x-2">
+                <button id="createTab" class="px-4 py-2 bg-blue-700 rounded-l hover:bg-blue-800 text-sm md:text-base">Create Quotation</button>
+                <button id="recordsTab" class="px-4 py-2 bg-blue-500 rounded-r hover:bg-blue-600 text-sm md:text-base">View Records</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Create Quotation Page -->
+    <div id="createPage" class="page p-4 md:p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-xl md:text-2xl font-bold mb-4 md:mb-6">Create New Quotation</h2>
+            
+            <!-- Quotation Form -->
+            <div class="bg-white p-4 md:p-6 rounded-lg shadow-md mb-4 md:mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                    <div>
+                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Client Name</label>
+                        <input type="text" id="clientName" class="w-full p-2 border border-gray-300 rounded text-sm md:text-base">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Client Address</label>
+                        <input type="text" id="clientAddress" class="w-full p-2 border border-gray-300 rounded text-sm md:text-base">
+                    </div>
+                </div>
+                
+                <!-- Items Table -->
+                <div class="mb-4 md:mb-6">
+                    <h3 class="text-base md:text-lg font-semibold mb-2 md:mb-3">Items</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse border border-gray-300 text-xs md:text-sm">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border border-gray-300 p-1 md:p-2">S.N.</th>
+                                    <th class="border border-gray-300 p-1 md:p-2">Description</th>
+                                    <th class="border border-gray-300 p-1 md:p-2">Quantity</th>
+                                    <th class="border border-gray-300 p-1 md:p-2">Unit</th>
+                                    <th class="border border-gray-300 p-1 md:p-2">Price</th>
+                                    <th class="border border-gray-300 p-1 md:p-2">Disc %</th>
+                                    <th class="border border-gray-300 p-1 md:p-2">Total</th>
+                                    <th class="border border-gray-300 p-1 md:p-2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTable">
+                                <!-- Items will be added here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <button id="addItem" class="mt-2 md:mt-3 px-3 py-1 md:px-4 md:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base">
+                        Add Item
+                    </button>
+                </div>
+                
+                <!-- Additional Charges -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                    <div>
+                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Cartage</label>
+                        <input type="number" id="cartage" value="0" class="w-full p-2 border border-gray-300 rounded text-sm md:text-base">
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-4">
+                    <button id="saveQuotation" class="px-4 py-2 md:px-6 md:py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm md:text-base">
+                        Save Quotation
+                    </button>
+                    <button id="downloadPdf" class="px-4 py-2 md:px-6 md:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base">
+                        Download PDF
+                    </button>
+                    <button id="resetForm" class="px-4 py-2 md:px-6 md:py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm md:text-base">
+                        Reset Form
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quotation Preview -->
+            <div class="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                <h3 class="text-lg md:text-xl font-bold mb-3 md:mb-4">Quotation Preview</h3>
+                <div id="quotationPreview" class="quotation-preview bg-white">
+                    <!-- Preview will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Records Page -->
+    <div id="recordsPage" class="page p-4 md:p-6 hidden">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-xl md:text-2xl font-bold mb-4 md:mb-6">Quotation Records</h2>
+            
+            <!-- Search and Filter -->
+            <div class="bg-white p-3 md:p-4 rounded-lg shadow-md mb-4 md:mb-6">
+                <div class="flex flex-col md:flex-row gap-2 md:gap-4">
+                    <input type="text" id="searchInput" placeholder="Search by client name..." class="flex-grow p-2 border border-gray-300 rounded text-sm md:text-base">
+                    <button id="searchBtn" class="px-3 py-2 md:px-4 md:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base">
+                        Search
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Records Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs md:text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-2 md:p-3 text-left">Quotation No</th>
+                                <th class="p-2 md:p-3 text-left">Date</th>
+                                <th class="p-2 md:p-3 text-left">Client Name</th>
+                                <th class="p-2 md:p-3 text-left">Total Amount</th>
+                                <th class="p-2 md:p-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTable">
+                            <!-- Records will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Quotation Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden p-2 md:p-4 z-50">
+        <div class="bg-white p-4 md:p-6 rounded-lg shadow-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-3 md:mb-4">
+                <h3 class="text-lg md:text-xl font-bold">Edit Quotation</h3>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="editFormContainer">
+                <!-- Edit form will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize variables
+        let quotations = JSON.parse(localStorage.getItem('quotations')) || [];
+        let currentQuotation = null;
+        let itemCounter = 0;
+
+        // DOM Elements
+        const createPage = document.getElementById('createPage');
+        const recordsPage = document.getElementById('recordsPage');
+        const createTab = document.getElementById('createTab');
+        const recordsTab = document.getElementById('recordsTab');
+        const itemsTable = document.getElementById('itemsTable');
+        const addItemBtn = document.getElementById('addItem');
+        const saveQuotationBtn = document.getElementById('saveQuotation');
+        const downloadPdfBtn = document.getElementById('downloadPdf');
+        const resetFormBtn = document.getElementById('resetForm');
+        const quotationPreview = document.getElementById('quotationPreview');
+        const recordsTable = document.getElementById('recordsTable');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const editModal = document.getElementById('editModal');
+        const closeModal = document.getElementById('closeModal');
+        const editFormContainer = document.getElementById('editFormContainer');
+
+        // Tab Navigation
+        createTab.addEventListener('click', () => {
+            createPage.classList.remove('hidden');
+            recordsPage.classList.add('hidden');
+            createTab.classList.add('bg-blue-700');
+            createTab.classList.remove('bg-blue-500');
+            recordsTab.classList.add('bg-blue-500');
+            recordsTab.classList.remove('bg-blue-600');
+        });
+
+        recordsTab.addEventListener('click', () => {
+            createPage.classList.add('hidden');
+            recordsPage.classList.remove('hidden');
+            recordsTab.classList.add('bg-blue-700');
+            recordsTab.classList.remove('bg-blue-500');
+            createTab.classList.add('bg-blue-500');
+            createTab.classList.remove('bg-blue-600');
+            loadRecords();
+        });
+
+        // Add item to the table
+        addItemBtn.addEventListener('click', () => {
+            addItemRow();
+        });
+
+        // Save quotation
+        saveQuotationBtn.addEventListener('click', () => {
+            saveQuotation();
+        });
+
+        // Download PDF
+        downloadPdfBtn.addEventListener('click', () => {
+            downloadPDF();
+        });
+
+        // Reset form
+        resetFormBtn.addEventListener('click', () => {
+            resetForm();
+        });
+
+        // Search functionality
+        searchBtn.addEventListener('click', () => {
+            loadRecords(searchInput.value);
+        });
+
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            editModal.classList.add('hidden');
+        });
+
+        // Initialize with one item row
+        addItemRow();
+
+        // Functions
+        function addItemRow() {
+            itemCounter++;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="border border-gray-300 p-1 md:p-2">${itemCounter}</td>
+                <td class="border border-gray-300 p-1 md:p-2">
+                    <input type="text" class="item-desc w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="">
+                </td>
+                <td class="border border-gray-300 p-1 md:p-2">
+                    <input type="number" class="item-qty w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="1" min="1">
+                </td>
+                <td class="border border-gray-300 p-1 md:p-2">
+                    <select class="item-unit w-full p-1 border border-gray-300 rounded text-xs md:text-sm">
+                        <option value="Pcs">Pcs</option>
+                        <option value="Set">Set</option>
+                        <option value="Box">Box</option>
+                        <option value="Kg">Kg</option>
+                    </select>
+                </td>
+                <td class="border border-gray-300 p-1 md:p-2">
+                    <input type="number" class="item-price w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="0" min="0" step="0.01">
+                </td>
+                <td class="border border-gray-300 p-1 md:p-2">
+                    <input type="number" class="item-disc w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="0" min="0" max="100">
+                </td>
+                <td class="border border-gray-300 p-1 md:p-2 item-total text-xs md:text-sm">0.00</td>
+                <td class="border border-gray-300 p-1 md:p-2">
+                    <button class="remove-item px-1 py-0.5 md:px-2 md:py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">Remove</button>
+                </td>
+            `;
+            itemsTable.appendChild(row);
+
+            // Add event listeners for calculation
+            const qtyInput = row.querySelector('.item-qty');
+            const priceInput = row.querySelector('.item-price');
+            const discInput = row.querySelector('.item-disc');
+            const totalCell = row.querySelector('.item-total');
+            const removeBtn = row.querySelector('.remove-item');
+
+            const calculateRowTotal = () => {
+                const qty = parseFloat(qtyInput.value) || 0;
+                const price = parseFloat(priceInput.value) || 0;
+                const disc = parseFloat(discInput.value) || 0;
+                const total = qty * price * (1 - disc/100);
+                totalCell.textContent = total.toFixed(2);
+                updatePreview();
+            };
+
+            qtyInput.addEventListener('input', calculateRowTotal);
+            priceInput.addEventListener('input', calculateRowTotal);
+            discInput.addEventListener('input', calculateRowTotal);
+
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+                updateItemNumbers();
+                updatePreview();
+            });
+
+            updatePreview();
+        }
+
+        function updateItemNumbers() {
+            const rows = itemsTable.querySelectorAll('tr');
+            itemCounter = 0;
+            rows.forEach(row => {
+                itemCounter++;
+                row.cells[0].textContent = itemCounter;
+            });
+        }
+
+        function updatePreview() {
+            const clientName = document.getElementById('clientName').value || 'Cash';
+            const clientAddress = document.getElementById('clientAddress').value || 'D-9, F.B. Area, Karachi.';
+            const cartage = parseFloat(document.getElementById('cartage').value) || 0;
+            
+            // Calculate totals
+            let totalQty = 0;
+            let totalAmount = 0;
+            let totalDisc = 0;
+            
+            const rows = itemsTable.querySelectorAll('tr');
+            const items = [];
+            
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const disc = parseFloat(row.querySelector('.item-disc').value) || 0;
+                const total = parseFloat(row.querySelector('.item-total').textContent) || 0;
+                
+                totalQty += qty;
+                totalAmount += total;
+                totalDisc += (qty * price * disc/100);
+                
+                items.push({
+                    description: row.querySelector('.item-desc').value,
+                    quantity: qty,
+                    unit: row.querySelector('.item-unit').value,
+                    price: price,
+                    disc: disc,
+                    total: total
+                });
+            });
+            
+            const grandTotal = totalAmount + cartage;
+            
+            // Generate completely blank rows (10 blank rows for manual writing)
+            const blankRows = Array(10).fill().map(() => `
+                <tr class="blank-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            `).join('');
+            
+            // Generate preview HTML
+            quotationPreview.innerHTML = `
+                <div class="text-center mb-6 md:mb-8">
+                    <h1 class="text-xl md:text-2xl font-bold">QUOTATION</h1>
+                </div>
+                
+                <div class="mb-4 md:mb-6">
+                    <p><strong>Customer:</strong> ${clientName}</p>
+                    <p><strong>Address:</strong> ${clientAddress}</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+                    <div>
+                        <p><strong>Bill No:</strong> <span id="previewBillNo">${currentQuotation ? currentQuotation.billNo : 'Auto-generated'}</span></p>
+                        <p><strong>Bill Date:</strong> <span id="previewBillDate">${new Date().toLocaleDateString('en-GB')}</span></p>
+                    </div>
+                    <div>
+                        <p><strong>Challan No:</strong> -</p>
+                        <p><strong>Transporter Name:</strong> Self Collect</p>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-800 mb-3 md:mb-4 text-xs md:text-sm">
+                        <thead>
+                            <tr class="bg-gray-200">
+                                <th class="border border-gray-800 p-1 md:p-2">S.N.</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Description</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Quantity</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Unit</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Price</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Disc %</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map((item, index) => `
+                                <tr>
+                                    <td class="border border-gray-800 p-1 md:p-2">${index + 1}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2">${item.description}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.quantity.toFixed(2)}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2">${item.unit}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.price.toFixed(2)}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.disc.toFixed(2)}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.total.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                            ${blankRows}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="border border-gray-800 p-1 md:p-2 font-bold" colspan="2">Total QTY</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${totalQty.toFixed(2)}</td>
+                                <td class="border border-gray-800 p-1 md:p-2 font-bold" colspan="2">Total Disc</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${totalDisc.toFixed(2)}</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${totalAmount.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-gray-800 p-1 md:p-2" colspan="6">Cartage</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right">${cartage.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-gray-800 p-1 md:p-2 font-bold" colspan="6">Grand Total</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${grandTotal.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="mb-4 md:mb-6">
+                    <p><strong>Rupees</strong> ${numberToWords(grandTotal)} Only.</p>
+                </div>
+                
+                <div class="mt-8 md:mt-12 text-xs md:text-sm">
+                    <p>Please make sure to check your balance once a week.</p>
+                    <p>Otherwise we will not be responsible for providing previous balance detail.</p>
+                </div>
+                
+                <div class="mt-10 md:mt-16 grid grid-cols-3 gap-3 md:gap-4">
+                    <div class="text-center">
+                        <p class="border-t border-gray-800 pt-1 md:pt-2">Prepared By</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="border-t border-gray-800 pt-1 md:pt-2">Checked By</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="border-t border-gray-800 pt-1 md:pt-2">Received By</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function numberToWords(num) {
+            // Simple number to words conversion for demonstration
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            
+            if (num === 0) return 'Zero';
+            
+            let words = '';
+            
+            // Handle thousands
+            if (num >= 1000) {
+                words += numberToWords(Math.floor(num / 1000)) + ' Thousand ';
+                num %= 1000;
+            }
+            
+            // Handle hundreds
+            if (num >= 100) {
+                words += ones[Math.floor(num / 100)] + ' Hundred ';
+                num %= 100;
+            }
+            
+            // Handle tens and ones
+            if (num >= 10 && num < 20) {
+                words += teens[num - 10] + ' ';
+            } else if (num >= 20) {
+                words += tens[Math.floor(num / 10)] + ' ';
+                num %= 10;
+            }
+            
+            if (num > 0) {
+                words += ones[num] + ' ';
+            }
+            
+            return words.trim() + ' Only';
+        }
+
+        function saveQuotation() {
+            const clientName = document.getElementById('clientName').value || 'Cash';
+            const clientAddress = document.getElementById('clientAddress').value || 'D-9, F.B. Area, Karachi.';
+            const cartage = parseFloat(document.getElementById('cartage').value) || 0;
+            
+            // Calculate totals and collect items
+            let totalQty = 0;
+            let totalAmount = 0;
+            const items = [];
+            
+            const rows = itemsTable.querySelectorAll('tr');
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const disc = parseFloat(row.querySelector('.item-disc').value) || 0;
+                const total = parseFloat(row.querySelector('.item-total').textContent) || 0;
+                
+                totalQty += qty;
+                totalAmount += total;
+                
+                items.push({
+                    description: row.querySelector('.item-desc').value,
+                    quantity: qty,
+                    unit: row.querySelector('.item-unit').value,
+                    price: price,
+                    disc: disc,
+                    total: total
+                });
+            });
+            
+            const grandTotal = totalAmount + cartage;
+            
+            // Generate quotation number
+            const quotationNo = 'QTN' + (quotations.length + 1).toString().padStart(4, '0');
+            
+            // Create quotation object
+            const quotation = {
+                id: Date.now(),
+                quotationNo: quotationNo,
+                billNo: quotationNo,
+                date: new Date().toISOString().split('T')[0],
+                clientName: clientName,
+                clientAddress: clientAddress,
+                items: items,
+                cartage: cartage,
+                totalQty: totalQty,
+                totalAmount: totalAmount,
+                grandTotal: grandTotal
+            };
+            
+            // Add to quotations array
+            quotations.push(quotation);
+            
+            // Save to localStorage
+            localStorage.setItem('quotations', JSON.stringify(quotations));
+            
+            // Set as current quotation
+            currentQuotation = quotation;
+            
+            // Update preview with bill number
+            document.getElementById('previewBillNo').textContent = quotationNo;
+            
+            alert('Quotation saved successfully!');
+        }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Capture the preview element as an image
+            html2canvas(quotationPreview).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 210; // A4 width in mm
+                const pageHeight = 295; // A4 height in mm
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                
+                let position = 0;
+                
+                // Add first page
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                // Add additional pages if needed
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                // Save the PDF
+                const fileName = `Quotation_${currentQuotation ? currentQuotation.quotationNo : 'Draft'}.pdf`;
+                doc.save(fileName);
+            });
+        }
+
+        function resetForm() {
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientAddress').value = '';
+            document.getElementById('cartage').value = '0';
+            
+            // Clear items table
+            itemsTable.innerHTML = '';
+            itemCounter = 0;
+            addItemRow();
+            
+            currentQuotation = null;
+            updatePreview();
+        }
+
+        function loadRecords(searchTerm = '') {
+            recordsTable.innerHTML = '';
+            
+            const filteredQuotations = quotations.filter(quotation => 
+                quotation.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            if (filteredQuotations.length === 0) {
+                recordsTable.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="p-3 md:p-4 text-center">No quotations found</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            filteredQuotations.forEach(quotation => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="p-2 md:p-3">${quotation.quotationNo}</td>
+                    <td class="p-2 md:p-3">${quotation.date}</td>
+                    <td class="p-2 md:p-3">${quotation.clientName}</td>
+                    <td class="p-2 md:p-3">${quotation.grandTotal.toFixed(2)}</td>
+                    <td class="p-2 md:p-3">
+                        <div class="flex flex-wrap gap-1">
+                            <button class="view-quotation px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs" data-id="${quotation.id}">
+                                View
+                            </button>
+                            <button class="edit-quotation px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs" data-id="${quotation.id}">
+                                Edit
+                            </button>
+                            <button class="download-quotation px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs" data-id="${quotation.id}">
+                                Download
+                            </button>
+                            <button class="delete-quotation px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs" data-id="${quotation.id}">
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                `;
+                recordsTable.appendChild(row);
+            });
+            
+            // Add event listeners to buttons
+            document.querySelectorAll('.view-quotation').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    viewQuotation(id);
+                });
+            });
+            
+            document.querySelectorAll('.edit-quotation').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    editQuotation(id);
+                });
+            });
+            
+            document.querySelectorAll('.download-quotation').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    downloadQuotationPDF(id);
+                });
+            });
+            
+            document.querySelectorAll('.delete-quotation').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    deleteQuotation(id);
+                });
+            });
+        }
+
+        function viewQuotation(id) {
+            const quotation = quotations.find(q => q.id === id);
+            if (!quotation) return;
+            
+            // Switch to create page and load the quotation
+            createTab.click();
+            
+            // Fill the form with quotation data
+            document.getElementById('clientName').value = quotation.clientName;
+            document.getElementById('clientAddress').value = quotation.clientAddress;
+            document.getElementById('cartage').value = quotation.cartage;
+            
+            // Clear and repopulate items table
+            itemsTable.innerHTML = '';
+            itemCounter = 0;
+            
+            quotation.items.forEach(item => {
+                addItemRow();
+                const lastRow = itemsTable.lastElementChild;
+                lastRow.querySelector('.item-desc').value = item.description;
+                lastRow.querySelector('.item-qty').value = item.quantity;
+                lastRow.querySelector('.item-unit').value = item.unit;
+                lastRow.querySelector('.item-price').value = item.price;
+                lastRow.querySelector('.item-disc').value = item.disc;
+                
+                // Trigger calculation
+                const event = new Event('input');
+                lastRow.querySelector('.item-qty').dispatchEvent(event);
+            });
+            
+            currentQuotation = quotation;
+            updatePreview();
+        }
+
+        function editQuotation(id) {
+            const quotation = quotations.find(q => q.id === id);
+            if (!quotation) return;
+            
+            // Create edit form
+            editFormContainer.innerHTML = `
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-1 md:mb-2 text-sm md:text-base">Client Name</label>
+                    <input type="text" id="editClientName" class="w-full p-2 border border-gray-300 rounded text-sm md:text-base" value="${quotation.clientName}">
+                </div>
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-1 md:mb-2 text-sm md:text-base">Client Address</label>
+                    <input type="text" id="editClientAddress" class="w-full p-2 border border-gray-300 rounded text-sm md:text-base" value="${quotation.clientAddress}">
+                </div>
+                
+                <h3 class="text-base md:text-lg font-semibold mb-2 md:mb-3">Items</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300 mb-3 md:mb-4 text-xs md:text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-gray-300 p-1 md:p-2">S.N.</th>
+                                <th class="border border-gray-300 p-1 md:p-2">Description</th>
+                                <th class="border border-gray-300 p-1 md:p-2">Quantity</th>
+                                <th class="border border-gray-300 p-1 md:p-2">Unit</th>
+                                <th class="border border-gray-300 p-1 md:p-2">Price</th>
+                                <th class="border border-gray-300 p-1 md:p-2">Disc %</th>
+                                <th class="border border-gray-300 p-1 md:p-2">Total</th>
+                                <th class="border border-gray-300 p-1 md:p-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editItemsTable">
+                            <!-- Items will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+                <button id="addEditItem" class="mb-3 md:mb-4 px-3 py-1 md:px-4 md:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base">
+                    Add Item
+                </button>
+                
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-1 md:mb-2 text-sm md:text-base">Cartage</label>
+                    <input type="number" id="editCartage" class="w-full p-2 border border-gray-300 rounded text-sm md:text-base" value="${quotation.cartage}">
+                </div>
+                
+                <div class="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-4">
+                    <button id="updateQuotation" class="px-4 py-2 md:px-6 md:py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm md:text-base" data-id="${quotation.id}">
+                        Update Quotation
+                    </button>
+                    <button id="cancelEdit" class="px-4 py-2 md:px-6 md:py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm md:text-base">
+                        Cancel
+                    </button>
+                </div>
+            `;
+            
+            // Populate items table
+            const editItemsTable = document.getElementById('editItemsTable');
+            let editItemCounter = 0;
+            
+            quotation.items.forEach(item => {
+                editItemCounter++;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border border-gray-300 p-1 md:p-2">${editItemCounter}</td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="text" class="edit-item-desc w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="${item.description}">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="number" class="edit-item-qty w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="${item.quantity}" min="1">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <select class="edit-item-unit w-full p-1 border border-gray-300 rounded text-xs md:text-sm">
+                            <option value="Pcs" ${item.unit === 'Pcs' ? 'selected' : ''}>Pcs</option>
+                            <option value="Set" ${item.unit === 'Set' ? 'selected' : ''}>Set</option>
+                            <option value="Box" ${item.unit === 'Box' ? 'selected' : ''}>Box</option>
+                            <option value="Kg" ${item.unit === 'Kg' ? 'selected' : ''}>Kg</option>
+                        </select>
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="number" class="edit-item-price w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="${item.price}" min="0" step="0.01">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="number" class="edit-item-disc w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="${item.disc}" min="0" max="100">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2 edit-item-total text-xs md:text-sm">${item.total.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <button class="remove-edit-item px-1 py-0.5 md:px-2 md:py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">Remove</button>
+                    </td>
+                `;
+                editItemsTable.appendChild(row);
+                
+                // Add event listeners for calculation
+                const qtyInput = row.querySelector('.edit-item-qty');
+                const priceInput = row.querySelector('.edit-item-price');
+                const discInput = row.querySelector('.edit-item-disc');
+                const totalCell = row.querySelector('.edit-item-total');
+                const removeBtn = row.querySelector('.remove-edit-item');
+                
+                const calculateRowTotal = () => {
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const price = parseFloat(priceInput.value) || 0;
+                    const disc = parseFloat(discInput.value) || 0;
+                    const total = qty * price * (1 - disc/100);
+                    totalCell.textContent = total.toFixed(2);
+                };
+                
+                qtyInput.addEventListener('input', calculateRowTotal);
+                priceInput.addEventListener('input', calculateRowTotal);
+                discInput.addEventListener('input', calculateRowTotal);
+                
+                removeBtn.addEventListener('click', () => {
+                    row.remove();
+                    updateEditItemNumbers();
+                });
+            });
+            
+            // Add event listener for adding new items
+            document.getElementById('addEditItem').addEventListener('click', () => {
+                editItemCounter++;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border border-gray-300 p-1 md:p-2">${editItemCounter}</td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="text" class="edit-item-desc w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="number" class="edit-item-qty w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="1" min="1">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <select class="edit-item-unit w-full p-1 border border-gray-300 rounded text-xs md:text-sm">
+                            <option value="Pcs">Pcs</option>
+                            <option value="Set">Set</option>
+                            <option value="Box">Box</option>
+                            <option value="Kg">Kg</option>
+                        </select>
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="number" class="edit-item-price w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="0" min="0" step="0.01">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <input type="number" class="edit-item-disc w-full p-1 border border-gray-300 rounded text-xs md:text-sm" value="0" min="0" max="100">
+                    </td>
+                    <td class="border border-gray-300 p-1 md:p-2 edit-item-total text-xs md:text-sm">0.00</td>
+                    <td class="border border-gray-300 p-1 md:p-2">
+                        <button class="remove-edit-item px-1 py-0.5 md:px-2 md:py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">Remove</button>
+                    </td>
+                `;
+                editItemsTable.appendChild(row);
+                
+                // Add event listeners for calculation
+                const qtyInput = row.querySelector('.edit-item-qty');
+                const priceInput = row.querySelector('.edit-item-price');
+                const discInput = row.querySelector('.edit-item-disc');
+                const totalCell = row.querySelector('.edit-item-total');
+                const removeBtn = row.querySelector('.remove-edit-item');
+                
+                const calculateRowTotal = () => {
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const price = parseFloat(priceInput.value) || 0;
+                    const disc = parseFloat(discInput.value) || 0;
+                    const total = qty * price * (1 - disc/100);
+                    totalCell.textContent = total.toFixed(2);
+                };
+                
+                qtyInput.addEventListener('input', calculateRowTotal);
+                priceInput.addEventListener('input', calculateRowTotal);
+                discInput.addEventListener('input', calculateRowTotal);
+                
+                removeBtn.addEventListener('click', () => {
+                    row.remove();
+                    updateEditItemNumbers();
+                });
+            });
+            
+            // Add event listener for updating quotation
+            document.getElementById('updateQuotation').addEventListener('click', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                updateQuotation(id);
+            });
+            
+            // Add event listener for cancel button
+            document.getElementById('cancelEdit').addEventListener('click', () => {
+                editModal.classList.add('hidden');
+            });
+            
+            // Show the modal
+            editModal.classList.remove('hidden');
+        }
+
+        function updateEditItemNumbers() {
+            const rows = document.getElementById('editItemsTable').querySelectorAll('tr');
+            let counter = 0;
+            rows.forEach(row => {
+                counter++;
+                row.cells[0].textContent = counter;
+            });
+        }
+
+        function updateQuotation(id) {
+            const quotationIndex = quotations.findIndex(q => q.id === id);
+            if (quotationIndex === -1) return;
+            
+            const clientName = document.getElementById('editClientName').value;
+            const clientAddress = document.getElementById('editClientAddress').value;
+            const cartage = parseFloat(document.getElementById('editCartage').value) || 0;
+            
+            // Calculate totals and collect items
+            let totalQty = 0;
+            let totalAmount = 0;
+            const items = [];
+            
+            const rows = document.getElementById('editItemsTable').querySelectorAll('tr');
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.edit-item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.edit-item-price').value) || 0;
+                const disc = parseFloat(row.querySelector('.edit-item-disc').value) || 0;
+                const total = parseFloat(row.querySelector('.edit-item-total').textContent) || 0;
+                
+                totalQty += qty;
+                totalAmount += total;
+                
+                items.push({
+                    description: row.querySelector('.edit-item-desc').value,
+                    quantity: qty,
+                    unit: row.querySelector('.edit-item-unit').value,
+                    price: price,
+                    disc: disc,
+                    total: total
+                });
+            });
+            
+            const grandTotal = totalAmount + cartage;
+            
+            // Update quotation
+            quotations[quotationIndex] = {
+                ...quotations[quotationIndex],
+                clientName: clientName,
+                clientAddress: clientAddress,
+                items: items,
+                cartage: cartage,
+                totalQty: totalQty,
+                totalAmount: totalAmount,
+                grandTotal: grandTotal
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('quotations', JSON.stringify(quotations));
+            
+            // Close modal and reload records
+            editModal.classList.add('hidden');
+            loadRecords();
+            
+            alert('Quotation updated successfully!');
+        }
+
+        function downloadQuotationPDF(id) {
+            const quotation = quotations.find(q => q.id === id);
+            if (!quotation) return;
+            
+            // Create a temporary preview for the specific quotation
+            const tempPreview = document.createElement('div');
+            tempPreview.className = 'quotation-preview bg-white';
+            
+            // Generate completely blank rows (10 blank rows for manual writing)
+            const blankRows = Array(10).fill().map(() => `
+                <tr class="blank-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            `).join('');
+            
+            tempPreview.innerHTML = `
+                <div class="text-center mb-6 md:mb-8">
+                    <h1 class="text-xl md:text-2xl font-bold">QUOTATION</h1>
+                </div>
+                
+                <div class="mb-4 md:mb-6">
+                    <p><strong>Customer:</strong> ${quotation.clientName}</p>
+                    <p><strong>Address:</strong> ${quotation.clientAddress}</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+                    <div>
+                        <p><strong>Bill No:</strong> ${quotation.billNo}</p>
+                        <p><strong>Bill Date:</strong> ${quotation.date}</p>
+                    </div>
+                    <div>
+                        <p><strong>Challan No:</strong> -</p>
+                        <p><strong>Transporter Name:</strong> Self Collect</p>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-800 mb-3 md:mb-4 text-xs md:text-sm">
+                        <thead>
+                            <tr class="bg-gray-200">
+                                <th class="border border-gray-800 p-1 md:p-2">S.N.</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Description</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Quantity</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Unit</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Price</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Disc %</th>
+                                <th class="border border-gray-800 p-1 md:p-2">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${quotation.items.map((item, index) => `
+                                <tr>
+                                    <td class="border border-gray-800 p-1 md:p-2">${index + 1}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2">${item.description}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.quantity.toFixed(2)}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2">${item.unit}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.price.toFixed(2)}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.disc.toFixed(2)}</td>
+                                    <td class="border border-gray-800 p-1 md:p-2 text-right">${item.total.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                            ${blankRows}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="border border-gray-800 p-1 md:p-2 font-bold" colspan="2">Total QTY</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${quotation.totalQty.toFixed(2)}</td>
+                                <td class="border border-gray-800 p-1 md:p-2 font-bold" colspan="2">Total Disc</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${(quotation.totalQty * quotation.items.reduce((sum, item) => sum + (item.price * item.disc/100), 0)).toFixed(2)}</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${quotation.totalAmount.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-gray-800 p-1 md:p-2" colspan="6">Cartage</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right">${quotation.cartage.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-gray-800 p-1 md:p-2 font-bold" colspan="6">Grand Total</td>
+                                <td class="border border-gray-800 p-1 md:p-2 text-right font-bold">${quotation.grandTotal.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="mb-4 md:mb-6">
+                    <p><strong>Rupees</strong> ${numberToWords(quotation.grandTotal)} Only.</p>
+                </div>
+                
+                <div class="mt-8 md:mt-12 text-xs md:text-sm">
+                    <p>Please make sure to check your balance once a week.</p>
+                    <p>Otherwise we will not be responsible for providing previous balance detail.</p>
+                </div>
+                
+                <div class="mt-10 md:mt-16 grid grid-cols-3 gap-3 md:gap-4">
+                    <div class="text-center">
+                        <p class="border-t border-gray-800 pt-1 md:pt-2">Prepared By</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="border-t border-gray-800 pt-1 md:pt-2">Checked By</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="border-t border-gray-800 pt-1 md:pt-2">Received By</p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(tempPreview);
+            
+            // Generate PDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            html2canvas(tempPreview).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 210;
+                const pageHeight = 295;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                
+                let position = 0;
+                
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                const fileName = `Quotation_${quotation.quotationNo}.pdf`;
+                doc.save(fileName);
+                
+                // Remove temporary preview
+                document.body.removeChild(tempPreview);
+            });
+        }
+
+        function deleteQuotation(id) {
+            if (confirm('Are you sure you want to delete this quotation?')) {
+                quotations = quotations.filter(q => q.id !== id);
+                localStorage.setItem('quotations', JSON.stringify(quotations));
+                loadRecords();
+                alert('Quotation deleted successfully!');
+            }
+        }
+
+        // Initialize event listeners for form inputs to update preview
+        document.getElementById('clientName').addEventListener('input', updatePreview);
+        document.getElementById('clientAddress').addEventListener('input', updatePreview);
+        document.getElementById('cartage').addEventListener('input', updatePreview);
+    </script>
+</body>
+</html>
